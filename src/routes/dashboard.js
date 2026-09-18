@@ -68,7 +68,7 @@ router.post('/test-otp', async (req, res) => {
     }
 
     const otpData = otpService.createOtp({ phone, length: 6, expiryMinutes: 5 });
-    const message = `🔐 *WhatsApp OTP Verification*\n\nYour test verification code is: *${otpData.code}*\n\nValid for 5 minutes. Please do not share this code.`;
+    const message = `🔐 *Fulla OTP Verification*\n\nYour verification code is:\n*${otpData.code}*\n\nValid for 5 minutes. Please do not share this code.`;
 
     await whatsappService.sendTextMessage(otpData.phone, message);
 

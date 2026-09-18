@@ -18,7 +18,7 @@ router.post('/otp/send', async (req, res) => {
       phone,
       length = 6,
       expiryMinutes = 5,
-      messageTemplate = 'Your verification code is: *{{code}}*.\nValid for {{expiry}} minutes. Do not share this code with anyone.',
+      messageTemplate = '🔐 *Fulla OTP Verification*\n\nYour verification code is:\n*{{code}}*\n\nValid for {{expiry}} minutes. Please do not share this code.',
     } = req.body;
 
     if (!phone) {
