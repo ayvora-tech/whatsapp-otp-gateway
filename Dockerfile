@@ -18,8 +18,11 @@ COPY . .
 # Create volume mount point for persistent session and API keys
 VOLUME ["/app/data"]
 
+# Set default port (7860 for Hugging Face Spaces, or override via env)
+ENV PORT=7860
+
 # Expose port
-EXPOSE 3000
+EXPOSE 7860
 
 # Start server
 CMD ["npm", "start"]
