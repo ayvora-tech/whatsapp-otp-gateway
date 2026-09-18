@@ -1,0 +1,7 @@
+node_modules
+data/auth_info
+data/keys.json
+data/otps.json
+.git
+.env
+*.log
