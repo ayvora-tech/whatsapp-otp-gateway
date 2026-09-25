@@ -2,14 +2,18 @@ import express from 'express';
 import { whatsappService } from '../whatsapp.js';
 import { otpService } from '../otpService.js';
 import { apiKeyService } from '../apiKeyService.js';
+import { smsGatewayService } from '../smsGatewayService.js';
 
 const router = express.Router();
 
 // Get live dashboard overview
 router.get('/status', (req, res) => {
   const status = whatsappService.getStatus();
+  const smsStatus = smsGatewayService.getStatus();
+
   res.json({
     ...status,
+    smsGateway: smsStatus,
     activeOtps: otpService.getActiveCount(),
   });
 });
@@ -45,36 +49,59 @@ router.delete('/keys/:id', (req, res) => {
   res.json({ success: deleted });
 });
 
-// Get recent activity logs
+// Get recent activity logs (both WhatsApp and Android SMS)
 router.get('/logs', (req, res) => {
+  const waLogs = whatsappService.getRecentLogs() || [];
+  const smsLogs = smsGatewayService.getLogs() || [];
+
+  // Combine and sort by timestamp desc
+  const allLogs = [...waLogs, ...smsLogs].sort(
+    (a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
+  ).slice(0, 100);
+
   res.json({
-    logs: whatsappService.getRecentLogs(),
+    logs: allLogs,
   });
 });
 
-// Send test OTP directly from dashboard
+// Send test OTP directly from dashboard (supports WhatsApp and SMS)
 router.post('/test-otp', async (req, res) => {
   try {
-    const { phone } = req.body;
+    const { phone, channel = 'whatsapp' } = req.body;
     if (!phone) {
       return res.status(400).json({ success: false, error: 'Phone number is required.' });
     }
 
-    if (whatsappService.status !== 'connected') {
+    const selectedChannel = channel.toLowerCase();
+
+    if (selectedChannel === 'whatsapp' && whatsappService.status !== 'connected') {
       return res.status(400).json({
         success: false,
-        error: 'WhatsApp is not connected. Please scan the QR code first.',
+        error: 'WhatsApp is not connected. Please scan the QR code first, or select SMS channel.',
+      });
+    }
+
+    if (selectedChannel === 'sms' && !smsGatewayService.getStatus().isConnected) {
+      return res.status(400).json({
+        success: false,
+        error: 'Android SMS Gateway is not connected. Please open the Fulla SMS Gateway app on your phone.',
       });
     }
 
     const otpData = otpService.createOtp({ phone, length: 6, expiryMinutes: 5 });
-    const message = `🔐 *Fulla OTP Verification*\n\nYour verification code is:\n*${otpData.code}*\n\nValid for 5 minutes. Please do not share this code.`;
 
-    await whatsappService.sendTextMessage(otpData.phone, message);
+    if (selectedChannel === 'whatsapp') {
+      const message = `🔐 *Fulla OTP Verification*\n\nYour verification code is:\n*${otpData.code}*\n\nValid for 5 minutes. Please do not share this code.`;
+      await whatsappService.sendTextMessage(otpData.phone, message);
+    } else {
+      const message = `Your Fulla verification code is: ${otpData.code}. Valid for 5 minutes. Do not share.`;
+      await smsGatewayService.sendSms(otpData.phone, message);
+    }
 
     res.json({
       success: true,
-      message: `Test OTP sent to +${otpData.phone}!`,
+      channel: selectedChannel,
+      message: `Test OTP sent to +${otpData.phone} via ${selectedChannel === 'whatsapp' ? 'WhatsApp' : 'SMS'}!`,
       phone: otpData.phone,
       code: otpData.code, // Returned in dashboard test mode for convenience
       expiresInSeconds: otpData.expiresInSeconds,

@@ -1,0 +1,5 @@
+<resources>
+    <string name="app_name">Fulla SMS Gateway</string>
+    <string name="channel_name">SMS Gateway Service</string>
+    <string name="channel_desc">Keeps the phone connected to your OTP server to dispatch SMS</string>
+</resources>

@@ -3,6 +3,7 @@ let currentStatus = null;
 let currentKey = null;
 let activeLang = 'curl';
 let pollInterval = null;
+let selectedChannel = 'whatsapp'; // 'whatsapp' | 'sms'
 
 // Elements
 const connectionPill = document.getElementById('connectionPill');
@@ -11,9 +12,11 @@ const btnRefresh = document.getElementById('btnRefresh');
 
 const statStatus = document.getElementById('statStatus');
 const statUserPhone = document.getElementById('statUserPhone');
+const statSmsStatus = document.getElementById('statSmsStatus');
+const statSmsDevice = document.getElementById('statSmsDevice');
 const statActiveOtps = document.getElementById('statActiveOtps');
 const statTotalSent = document.getElementById('statTotalSent');
-const statUptime = document.getElementById('statUptime');
+const statTotalSentSub = document.getElementById('statTotalSentSub');
 
 const qrSection = document.getElementById('qrSection');
 const qrImage = document.getElementById('qrImage');
@@ -24,11 +27,27 @@ const connectedPhone = document.getElementById('connectedPhone');
 const deviceStateBadge = document.getElementById('deviceStateBadge');
 const btnLogout = document.getElementById('btnLogout');
 
-// Sandbox Tabs
+// Android SMS Gateway Elements
+const smsDeviceBadge = document.getElementById('smsDeviceBadge');
+const smsConnectedSection = document.getElementById('smsConnectedSection');
+const smsDisconnectedSection = document.getElementById('smsDisconnectedSection');
+const smsDeviceModel = document.getElementById('smsDeviceModel');
+const smsDeviceCarrier = document.getElementById('smsDeviceCarrier');
+const smsDeviceBattery = document.getElementById('smsDeviceBattery');
+const smsDeviceSentCount = document.getElementById('smsDeviceSentCount');
+const smsServerUrlText = document.getElementById('smsServerUrlText');
+const smsPairingKeyText = document.getElementById('smsPairingKeyText');
+const btnCopyServerUrl = document.getElementById('btnCopyServerUrl');
+const btnCopyPairingKey = document.getElementById('btnCopyPairingKey');
+
+// Sandbox Tabs & Channels
 const tabSendBtn = document.getElementById('tabSendBtn');
 const tabVerifyBtn = document.getElementById('tabVerifyBtn');
 const tabSend = document.getElementById('tabSend');
 const tabVerify = document.getElementById('tabVerify');
+const btnChannelWa = document.getElementById('btnChannelWa');
+const btnChannelSms = document.getElementById('btnChannelSms');
+const btnSendOtpText = document.getElementById('btnSendOtpText');
 
 const formSendOtp = document.getElementById('formSendOtp');
 const inputTestPhone = document.getElementById('inputTestPhone');
@@ -94,10 +113,22 @@ async function fetchStatus() {
 function renderStatus(data) {
   // Stat values
   statActiveOtps.textContent = data.activeOtps || 0;
-  statTotalSent.textContent = data.stats?.totalSent || 0;
-  statUptime.textContent = formatUptime(data.stats?.uptimeSeconds);
+  const waSent = data.stats?.totalSent || 0;
+  const smsSent = data.smsGateway?.stats?.totalSent || 0;
+  statTotalSent.textContent = waSent + smsSent;
+  if (statTotalSentSub) {
+    statTotalSentSub.textContent = `WA: ${waSent} • SMS: ${smsSent}`;
+  }
 
-  // Status Pill & Badge
+  // Auto-populate SMS pairing server URL
+  if (smsServerUrlText) {
+    smsServerUrlText.textContent = window.location.origin;
+  }
+  if (smsPairingKeyText && currentKey) {
+    smsPairingKeyText.textContent = currentKey;
+  }
+
+  // 1. WhatsApp Status Pill & Badge
   if (data.status === 'connected') {
     connectionPill.className = 'status-pill status-connected';
     connectionPillText.textContent = `Connected (+${data.user?.phone || 'WA'})`;
@@ -151,6 +182,38 @@ function renderStatus(data) {
 
     connectedSection.classList.add('hidden');
     qrSection.classList.remove('hidden');
+  }
+
+  // 2. Android SMS Gateway Status & Telemetry
+  const sms = data.smsGateway;
+  if (sms && sms.isConnected) {
+    const dev = sms.primaryDevice?.info || {};
+    statSmsStatus.textContent = 'Active';
+    statSmsStatus.className = 'stat-value text-green';
+    statSmsDevice.textContent = `${dev.model || 'Android Phone'} (Online)`;
+
+    smsDeviceBadge.textContent = 'Online';
+    smsDeviceBadge.className = 'badge badge-success';
+
+    smsConnectedSection.classList.remove('hidden');
+    smsDisconnectedSection.classList.add('hidden');
+
+    smsDeviceModel.textContent = dev.model || 'Android Device';
+    smsDeviceCarrier.textContent = dev.carrier || 'Active SIM';
+    smsDeviceBattery.textContent = dev.battery !== null && dev.battery !== undefined
+      ? `${dev.battery}% ${dev.isCharging ? '⚡' : ''}`
+      : 'Active';
+    smsDeviceSentCount.textContent = sms.stats?.totalSent || 0;
+  } else {
+    statSmsStatus.textContent = 'Offline';
+    statSmsStatus.className = 'stat-value text-yellow';
+    statSmsDevice.textContent = 'No phone connected';
+
+    smsDeviceBadge.textContent = 'Offline';
+    smsDeviceBadge.className = 'badge';
+
+    smsConnectedSection.classList.add('hidden');
+    smsDisconnectedSection.classList.remove('hidden');
   }
 }
 
@@ -222,17 +285,18 @@ function renderSnippet() {
 
   let code = '';
   if (activeLang === 'curl') {
-    code = `# Send an OTP verification code via WhatsApp
+    code = `# 1. Send OTP (channel: "whatsapp" | "sms" | "auto")
 curl -X POST "${origin}/api/otp/send" \\
   -H "Content-Type: application/json" \\
   -H "x-api-key: ${key}" \\
   -d '{
     "phone": "+1234567890",
+    "channel": "sms",
     "length": 6,
     "expiryMinutes": 5
   }'
 
-# Verify the OTP code entered by the user
+# 2. Verify the OTP code entered by the user
 curl -X POST "${origin}/api/otp/verify" \\
   -H "Content-Type: application/json" \\
   -H "x-api-key: ${key}" \\
@@ -241,8 +305,8 @@ curl -X POST "${origin}/api/otp/verify" \\
     "code": "648291"
   }'`;
   } else if (activeLang === 'javascript') {
-    code = `// Send OTP verification code
-async function sendWhatsAppOtp(phoneNumber) {
+    code = `// Send OTP verification code (channel: 'whatsapp' | 'sms' | 'auto')
+async function sendOtp(phoneNumber, channel = 'sms') {
   const res = await fetch("${origin}/api/otp/send", {
     method: "POST",
     headers: {
@@ -251,6 +315,7 @@ async function sendWhatsAppOtp(phoneNumber) {
     },
     body: JSON.stringify({
       phone: phoneNumber,
+      channel: channel,
       length: 6,
       expiryMinutes: 5
     })
@@ -259,7 +324,7 @@ async function sendWhatsAppOtp(phoneNumber) {
 }
 
 // Verify OTP entered by user
-async function verifyWhatsAppOtp(phoneNumber, code) {
+async function verifyOtp(phoneNumber, code) {
   const res = await fetch("${origin}/api/otp/verify", {
     method: "POST",
     headers: {
@@ -284,11 +349,11 @@ headers = {
     "x-api-key": API_KEY
 }
 
-# 1. Send OTP
+# 1. Send OTP (channel="sms" or "whatsapp" or "auto")
 send_response = requests.post(
     f"{BASE_URL}/api/otp/send",
     headers=headers,
-    json={"phone": "+1234567890", "length": 6, "expiryMinutes": 5}
+    json={"phone": "+1234567890", "channel": "sms", "length": 6, "expiryMinutes": 5}
 )
 print("Send result:", send_response.json())
 
@@ -310,10 +375,11 @@ const client = axios.create({
   }
 });
 
-// 1. Send OTP
-async function sendOtp(phone) {
+// 1. Send OTP (channel: 'sms' | 'whatsapp' | 'auto')
+async function sendOtp(phone, channel = 'sms') {
   const { data } = await client.post('/api/otp/send', {
     phone,
+    channel,
     length: 6,
     expiryMinutes: 5
   });
@@ -361,6 +427,42 @@ snippetTabs.forEach((tab) => {
   });
 });
 
+// Channel Selector Switcher (WhatsApp vs SMS)
+if (btnChannelWa && btnChannelSms) {
+  btnChannelWa.addEventListener('click', () => {
+    selectedChannel = 'whatsapp';
+    btnChannelWa.classList.add('active');
+    btnChannelSms.classList.remove('active');
+    if (btnSendOtpText) btnSendOtpText.textContent = 'Send OTP via WhatsApp';
+  });
+
+  btnChannelSms.addEventListener('click', () => {
+    selectedChannel = 'sms';
+    btnChannelSms.classList.add('active');
+    btnChannelWa.classList.remove('active');
+    if (btnSendOtpText) btnSendOtpText.textContent = 'Send OTP via SMS (Android SIM)';
+  });
+}
+
+// Copy Server URL & Pairing Key for Android App
+if (btnCopyServerUrl) {
+  btnCopyServerUrl.addEventListener('click', () => {
+    if (smsServerUrlText) {
+      navigator.clipboard.writeText(smsServerUrlText.textContent);
+      showToast('Server URL copied!');
+    }
+  });
+}
+
+if (btnCopyPairingKey) {
+  btnCopyPairingKey.addEventListener('click', () => {
+    if (currentKey) {
+      navigator.clipboard.writeText(currentKey);
+      showToast('API Key copied for Android App!');
+    }
+  });
+}
+
 // Tab Switcher
 tabSendBtn.addEventListener('click', () => {
   tabSendBtn.classList.add('active');
@@ -383,13 +485,15 @@ formSendOtp.addEventListener('submit', async (e) => {
   if (!phone) return;
 
   btnSubmitSendOtp.disabled = true;
-  btnSubmitSendOtp.querySelector('span').textContent = 'Sending...';
+  if (btnSendOtpText) {
+    btnSendOtpText.textContent = `Dispatching via ${selectedChannel === 'whatsapp' ? 'WhatsApp' : 'SMS'}...`;
+  }
 
   try {
     const res = await fetch('/api/dashboard/test-otp', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ phone }),
+      body: JSON.stringify({ phone, channel: selectedChannel }),
     });
 
     const data = await res.json();
@@ -400,7 +504,7 @@ formSendOtp.addEventListener('submit', async (e) => {
       previewOtpCode.textContent = data.code;
       inputVerifyPhone.value = data.phone;
       inputVerifyCode.value = data.code;
-      showToast('OTP delivered to WhatsApp!');
+      showToast(`OTP delivered via ${data.channel === 'sms' ? 'SMS SIM' : 'WhatsApp'}!`);
     } else {
       sendResultMessage.innerHTML = `<span style="color: var(--rose);">${data.error || 'Failed to send OTP'}</span>`;
       previewOtpCode.textContent = '------';
@@ -413,7 +517,9 @@ formSendOtp.addEventListener('submit', async (e) => {
     sendResultMessage.innerHTML = `<span style="color: var(--rose);">${err.message}</span>`;
   } finally {
     btnSubmitSendOtp.disabled = false;
-    btnSubmitSendOtp.querySelector('span').textContent = 'Send OTP via WhatsApp';
+    if (btnSendOtpText) {
+      btnSendOtpText.textContent = selectedChannel === 'whatsapp' ? 'Send OTP via WhatsApp' : 'Send OTP via SMS (Android SIM)';
+    }
   }
 });
 

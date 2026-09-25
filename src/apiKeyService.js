@@ -2,6 +2,7 @@ import fs from 'fs';
 import path from 'path';
 import crypto from 'crypto';
 import { fileURLToPath } from 'url';
+import { supabaseService } from './supabaseService.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -17,6 +18,35 @@ class ApiKeyService {
   constructor() {
     this.keys = [];
     this.loadKeys();
+    this.syncWithSupabase();
+  }
+
+  async syncWithSupabase() {
+    try {
+      const remoteKeys = await supabaseService.fetchRemoteKeys();
+      if (remoteKeys && remoteKeys.length > 0) {
+        // Merge remote keys with local keys
+        for (const rk of remoteKeys) {
+          const existing = this.keys.find(k => k.id === rk.id || k.key === rk.key);
+          if (!existing) {
+            this.keys.push({
+              id: rk.id,
+              name: rk.name,
+              key: rk.key,
+              createdAt: rk.created_at,
+              lastUsedAt: rk.last_used_at,
+              isActive: rk.is_active,
+            });
+          }
+        }
+        this.saveKeys();
+      } else {
+        // Push local keys to Supabase
+        for (const k of this.keys) {
+          await supabaseService.upsertApiKey(k);
+        }
+      }
+    } catch (_) {}
   }
 
   loadKeys() {
@@ -62,6 +92,7 @@ class ApiKeyService {
     const keyRecord = this.generateKey(name);
     this.keys.push(keyRecord);
     this.saveKeys();
+    supabaseService.upsertApiKey(keyRecord).catch(() => {});
     return keyRecord;
   }
 

@@ -5,3 +5,7 @@ data/otps.json
 .env
 *.log
 .DS_Store
+android-sms-gateway/.gradle/
+android-sms-gateway/app/build/
+android-sms-gateway/build/
+

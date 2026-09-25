@@ -25,8 +25,11 @@
           </svg>
         </div>
         <div class="brand-text">
-          <h1>WhatsApp OTP Gateway</h1>
-          <span class="badge-free">$0 Free &bull; Self-Hosted</span>
+          <h1>Fulla OTP &amp; SMS Gateway</h1>
+          <div style="display: flex; gap: 6px; margin-top: 2px;">
+            <span class="badge-free">$0 Free &bull; Self-Hosted</span>
+            <span class="badge-free" style="background: rgba(6, 182, 212, 0.15); color: var(--cyan); border: 1px solid rgba(6, 182, 212, 0.3);">☁️ Supabase Synced</span>
+          </div>
         </div>
       </div>
 
@@ -49,9 +52,14 @@
     <!-- Stat Cards -->
     <div class="stats-grid">
       <div class="stat-card">
-        <div class="stat-label">Gateway Status</div>
+        <div class="stat-label">WhatsApp Gateway</div>
         <div id="statStatus" class="stat-value text-yellow">Checking...</div>
         <div id="statUserPhone" class="stat-sub">No device connected</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Android SMS Gateway</div>
+        <div id="statSmsStatus" class="stat-value text-yellow">Offline</div>
+        <div id="statSmsDevice" class="stat-sub">No phone connected</div>
       </div>
       <div class="stat-card">
         <div class="stat-label">Active OTPs in Cache</div>
@@ -61,68 +69,132 @@
       <div class="stat-card">
         <div class="stat-label">Total Messages Sent</div>
         <div id="statTotalSent" class="stat-value">0</div>
-        <div class="stat-sub">Dispatched via WhatsApp</div>
-      </div>
-      <div class="stat-card">
-        <div class="stat-label">Server Uptime</div>
-        <div id="statUptime" class="stat-value">00:00:00</div>
-        <div class="stat-sub">Always Free 24/7</div>
+        <div id="statTotalSentSub" class="stat-sub">WhatsApp + SIM SMS</div>
       </div>
     </div>
 
     <!-- 2 Column Section: WhatsApp QR Device & Live Sandbox -->
     <div class="two-col-grid">
-      <!-- Device Link Card -->
-      <section class="card device-card">
-        <div class="card-header">
-          <div>
-            <h2 class="card-title">WhatsApp Linked Device</h2>
-            <p class="card-subtitle">Connect your WhatsApp account once &bull; session auto-persists</p>
+      <!-- Devices Column -->
+      <div class="devices-column">
+        <!-- Card 1: WhatsApp Linked Device -->
+        <section class="card device-card">
+          <div class="card-header">
+            <div>
+              <h2 class="card-title">WhatsApp Gateway</h2>
+              <p class="card-subtitle">Connect your WhatsApp account once &bull; session auto-persists</p>
+            </div>
+            <span id="deviceStateBadge" class="badge">Checking...</span>
           </div>
-          <span id="deviceStateBadge" class="badge">Checking...</span>
-        </div>
 
-        <!-- State 1: QR Code View -->
-        <div id="qrSection" class="qr-container">
-          <div class="qr-box">
-            <div id="qrLoadingSpinner" class="spinner"></div>
-            <img id="qrImage" alt="WhatsApp QR Code" class="qr-image hidden" />
-          </div>
-          <div class="qr-instructions">
-            <h3>How to link your WhatsApp:</h3>
-            <ol>
-              <li>Open <strong>WhatsApp</strong> on your mobile phone</li>
-              <li>Go to <strong>Settings</strong> or <strong>Menu</strong> &rarr; <strong>Linked Devices</strong></li>
-              <li>Tap <strong>Link a Device</strong> and scan the QR code above</li>
-            </ol>
-            <p class="qr-note">⚡ The QR automatically refreshes every 20 seconds.</p>
-          </div>
-        </div>
-
-        <!-- State 2: Connected View -->
-        <div id="connectedSection" class="connected-container hidden">
-          <div class="connected-badge-wrapper">
-            <div class="connected-icon">
-              <svg viewBox="0 0 24 24" width="48" height="48" fill="none" stroke="#25D366" stroke-width="2.5">
-                <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
-                <polyline points="22 4 12 14.01 9 11.01"></polyline>
-              </svg>
+          <!-- State 1: QR Code View -->
+          <div id="qrSection" class="qr-container">
+            <div class="qr-box">
+              <div id="qrLoadingSpinner" class="spinner"></div>
+              <img id="qrImage" alt="WhatsApp QR Code" class="qr-image hidden" />
+            </div>
+            <div class="qr-instructions">
+              <h3>How to link your WhatsApp:</h3>
+              <ol>
+                <li>Open <strong>WhatsApp</strong> on your mobile phone</li>
+                <li>Go to <strong>Settings</strong> or <strong>Menu</strong> &rarr; <strong>Linked Devices</strong></li>
+                <li>Tap <strong>Link a Device</strong> and scan the QR code above</li>
+              </ol>
+              <p class="qr-note">⚡ The QR automatically refreshes every 20 seconds.</p>
             </div>
           </div>
-          <h3 id="connectedName">WhatsApp Account Connected</h3>
-          <p id="connectedPhone" class="connected-phone-display">+0000000000</p>
-          <div class="connected-status-pill">Ready to send OTPs</div>
-          <p class="connected-desc">Your WhatsApp account is active and linked. You can close this tab or turn off your computer if deployed on Oracle Cloud.</p>
-          <button id="btnLogout" class="btn btn-danger">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
-              <polyline points="16 17 21 12 16 7"></polyline>
-              <line x1="21" y1="12" x2="9" y2="12"></line>
-            </svg>
-            Disconnect & Log Out
-          </button>
-        </div>
-      </section>
+
+          <!-- State 2: Connected View -->
+          <div id="connectedSection" class="connected-container hidden">
+            <div class="connected-badge-wrapper">
+              <div class="connected-icon">
+                <svg viewBox="0 0 24 24" width="48" height="48" fill="none" stroke="#25D366" stroke-width="2.5">
+                  <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
+                  <polyline points="22 4 12 14.01 9 11.01"></polyline>
+                </svg>
+              </div>
+            </div>
+            <h3 id="connectedName">WhatsApp Account Connected</h3>
+            <p id="connectedPhone" class="connected-phone-display">+0000000000</p>
+            <div class="connected-status-pill">Ready to send OTPs</div>
+            <p class="connected-desc">Your WhatsApp account is active and linked. You can close this tab or turn off your computer if deployed on Cloud.</p>
+            <button id="btnLogout" class="btn btn-danger">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
+                <polyline points="16 17 21 12 16 7"></polyline>
+                <line x1="21" y1="12" x2="9" y2="12"></line>
+              </svg>
+              Disconnect & Log Out
+            </button>
+          </div>
+        </section>
+
+        <!-- Card 2: Android Phone SMS Gateway (Option B) -->
+        <section class="card sms-device-card" style="margin-top: 24px;">
+          <div class="card-header">
+            <div>
+              <h2 class="card-title">📱 Android Phone SMS Gateway</h2>
+              <p class="card-subtitle">Option B &bull; Automatic SIM Card SMS Dispatcher</p>
+            </div>
+            <span id="smsDeviceBadge" class="badge">Offline</span>
+          </div>
+
+          <!-- Phone Connected State -->
+          <div id="smsConnectedSection" class="sms-connected-container hidden">
+            <div class="phone-info-grid">
+              <div class="phone-info-item">
+                <span class="phone-info-label">Device Model</span>
+                <span id="smsDeviceModel" class="phone-info-value">Android Phone</span>
+              </div>
+              <div class="phone-info-item">
+                <span class="phone-info-label">SIM Carrier</span>
+                <span id="smsDeviceCarrier" class="phone-info-value">Active SIM</span>
+              </div>
+              <div class="phone-info-item">
+                <span class="phone-info-label">Battery Level</span>
+                <span id="smsDeviceBattery" class="phone-info-value">--%</span>
+              </div>
+              <div class="phone-info-item">
+                <span class="phone-info-label">SMS Sent</span>
+                <span id="smsDeviceSentCount" class="phone-info-value text-green">0</span>
+              </div>
+            </div>
+            <div class="connected-status-pill" style="margin-top: 14px;">🟢 Background Service Active</div>
+            <p class="connected-desc" style="margin-top: 10px;">Phone is connected via WebSocket. SMS requests will be dispatched automatically from your phone's SIM card.</p>
+          </div>
+
+          <!-- Phone Disconnected State / Pairing Instructions -->
+          <div id="smsDisconnectedSection" class="sms-disconnected-container">
+            <p class="sms-setup-intro">Install the companion Android APK on your phone to send automated SMS directly from your SIM card.</p>
+
+            <a href="/downloads/fulla-sms-gateway.apk" download class="btn btn-primary btn-block" style="margin-bottom: 16px; text-decoration: none; display: flex; align-items: center; justify-content: center; gap: 8px;">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                <polyline points="7 10 12 15 17 10"></polyline>
+                <line x1="12" y1="15" x2="12" y2="3"></line>
+              </svg>
+              <span>Download Android App (.APK)</span>
+            </a>
+
+            <div class="sms-pairing-box">
+              <div class="pairing-item">
+                <span class="pairing-label">Server URL to enter in app:</span>
+                <div class="code-copy-row">
+                  <code id="smsServerUrlText">http://localhost:3000</code>
+                  <button id="btnCopyServerUrl" class="btn btn-sm btn-secondary">Copy</button>
+                </div>
+              </div>
+              <div class="pairing-item" style="margin-top: 10px;">
+                <span class="pairing-label">API Key / Token:</span>
+                <div class="code-copy-row">
+                  <code id="smsPairingKeyText">Loading...</code>
+                  <button id="btnCopyPairingKey" class="btn btn-sm btn-secondary">Copy</button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+      </div>
 
       <!-- Live Test Sandbox -->
       <section class="card sandbox-card">
@@ -141,7 +213,19 @@
         <!-- Tab 1: Send OTP -->
         <div id="tabSend" class="tab-content active">
           <form id="formSendOtp" class="form-group">
-            <label for="inputTestPhone">Recipient Phone Number</label>
+            <label>Dispatch Channel</label>
+            <div class="channel-selector-group">
+              <button type="button" id="btnChannelWa" class="channel-pill active" data-channel="whatsapp">
+                <span class="pill-dot wa-dot"></span>
+                <span>WhatsApp</span>
+              </button>
+              <button type="button" id="btnChannelSms" class="channel-pill" data-channel="sms">
+                <span class="pill-dot sms-dot"></span>
+                <span>SMS (Phone SIM)</span>
+              </button>
+            </div>
+
+            <label for="inputTestPhone" style="margin-top: 14px;">Recipient Phone Number</label>
             <div class="input-with-hint">
               <input type="tel" id="inputTestPhone" placeholder="e.g. +1234567890 (with country code)" required />
             </div>
@@ -152,7 +236,7 @@
                 <line x1="22" y1="2" x2="11" y2="13"></line>
                 <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
               </svg>
-              <span>Send OTP via WhatsApp</span>
+              <span id="btnSendOtpText">Send OTP via WhatsApp</span>
             </button>
           </form>
 

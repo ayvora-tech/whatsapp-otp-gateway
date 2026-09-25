@@ -1,28 +1,35 @@
-# 🚀 WhatsApp OTP Gateway (100% Free & Self-Hosted)
+# 🚀 Fulla OTP Gateway: WhatsApp & Android Phone SMS (100% Free & Self-Hosted)
 
-A lightweight, zero-cost WhatsApp OTP and messaging gateway built with **Node.js**, **Express**, and **Baileys Multi-Device**. Designed to run 24/7 on an Oracle Cloud "Always Free" VM, a VPS, or your local machine with **no Supabase or third-party database needed**.
+A lightweight, zero-cost WhatsApp & Android Phone SMS OTP gateway built with **Node.js**, **Express**, and **Baileys Multi-Device**. Designed to run 24/7 on an Oracle Cloud / Azure VM, a VPS, or your local machine with **no Supabase or third-party database needed**.
 
 ---
 
 ## ✨ Features
 
 - **$0 Cost Forever**: No Twilio, MessageBird, or Meta Cloud API per-message fees.
-- **Self-Contained**: Manages WhatsApp session, API keys, and OTP expiration locally.
+- **Dual Delivery Channels**:
+  - 🟢 **WhatsApp Gateway**: Dispatches rich OTP messages via linked WhatsApp account.
+  - 📱 **Android Phone SMS Gateway (Option B)**: Uses a dedicated Android app to turn any spare Android phone into an automated hardware SIM card SMS gateway!
+  - 🔀 **Auto Fallback**: Attempts WhatsApp first, then automatically falls back to your phone's SMS if disconnected or undelivered.
+- **Self-Contained**: Manages WhatsApp session, Android WebSocket connections, API keys, and OTP expiration locally.
 - **REST API Endpoints**:
-  - `POST /api/otp/send`: Generates cryptographically secure OTP and sends it via WhatsApp.
+  - `POST /api/otp/send`: Generates cryptographically secure OTP and sends it via WhatsApp or phone SMS (`channel: "whatsapp" | "sms" | "auto"`).
   - `POST /api/otp/verify`: Validates code, enforces expiration, prevents brute-forcing, and single-use invalidation.
+  - `POST /api/sms/send`: Sends custom arbitrary SMS messages via your connected Android phone.
   - `POST /api/message/send`: Sends custom arbitrary text messages via WhatsApp.
-  - `GET /api/status`: Returns gateway connection status and stats.
+  - `GET /api/status`: Returns gateway connection status and stats (WhatsApp + Android phone).
 - **Security & Protection**:
   - API Key authentication (`x-api-key`).
   - Rate limiting (max OTPs per phone within a time window).
   - Replay attack protection (one-time code consumption).
   - SHA-256 code hashing with salts.
 - **Modern Web Dashboard**:
-  - Real-time QR code display for 1-click mobile phone linking.
-  - Interactive live sandbox to send and verify test OTPs.
+  - Real-time QR code display for 1-click WhatsApp linking.
+  - Live Android Phone status monitor (model, carrier name, battery % ⚡, sent count).
+  - 1-Click APK download button for the companion Android app.
+  - Interactive live sandbox with channel selector (WhatsApp vs. Phone SMS).
   - API Key generator and copyable code snippets in JavaScript, Python, Node.js, and cURL.
-  - Live activity and delivery event logs.
+  - Real-time activity and delivery event logs.
 
 ---
 
